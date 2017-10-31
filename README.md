@@ -15,7 +15,7 @@ XMR-Stak-POWER will currently only compile with the GCC 6.3.1 compiler included 
 
 Here are some numbers:
 
-* **Dual POWER8 10C @ 2.8GHz, running 3 threads per core** - 1600 H/s
+* **Dual POWER8 10C @ 2.8GHz, running 4 threads per core** - 1800 H/s
 
 ## Default dev donation
 By default the miner will donate 0.88% of the hashpower.

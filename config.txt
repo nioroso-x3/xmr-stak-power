@@ -41,11 +41,11 @@
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 52 },
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 56 },
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 60 },
-/*Uncomment for 2 socket machine */
-/*{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 64 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 64 },
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 68 },
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 72 },
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 76 },
+
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 2 },
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 10 },
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 18 },
@@ -56,7 +56,19 @@
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 58 },
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 66 },
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 74 },
-/* second socket */
+
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 6 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 14 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 22 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 30 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 38},
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 46 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 54 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 62 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 70 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 78 },
+
+
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 80 },
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 84 },
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 88 },
@@ -86,7 +98,18 @@
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 130 },
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 138 },
 { "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 146 },
-{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 154 },*/
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 154 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 86 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 94 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 102 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 110 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 118},
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 126 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 134 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 142 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 150 },
+{ "low_power_mode" : false, "no_prefetch" : false, "affine_to_cpu" : 158 },
+
  
 ],
 /*
