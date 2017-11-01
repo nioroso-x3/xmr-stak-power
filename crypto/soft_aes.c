@@ -25,12 +25,14 @@
  * The orginal author of this AES implementation is Karl Malbrain.
  */
 
-#include "vec128intlib.h"
 #include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-
+#include <altivec.h>
+#undef vector
+#undef pixel
+#undef bool
+typedef __vector unsigned char __m128i;
 
 #define TABLE_ALIGN     32
 #define WPOLY           0x011b
@@ -155,18 +157,20 @@ d_4(uint32_t, t_dec(f,n), sb_data, u0, u1, u2, u3);
 __m128i soft_aesenc(__m128i in, __m128i key)
 {
 	uint32_t x0, x1, x2, x3;
-	x0 = vec_extractlowersw(in);
-	x1 = vec_extractlowersw(vec_permute4sw(in, 0x55));
-	x2 = vec_extractlowersw(vec_permute4sw(in, 0xAA));
-	x3 = vec_extractlowersw(vec_permute4sw(in, 0xFF));
+	x0 = ((uint32_t*)&in)[0];
+	x1 = ((uint32_t*)&in)[1];
+	x2 = ((uint32_t*)&in)[2];
+	x3 = ((uint32_t*)&in)[3];
 
-	__m128i out = vec_set4sw(
-		(t_fn[0][x3 & 0xff] ^ t_fn[1][(x0 >> 8) & 0xff] ^ t_fn[2][(x1 >> 16) & 0xff] ^ t_fn[3][x2 >> 24]),
-		(t_fn[0][x2 & 0xff] ^ t_fn[1][(x3 >> 8) & 0xff] ^ t_fn[2][(x0 >> 16) & 0xff] ^ t_fn[3][x1 >> 24]),
+	__m128i out = (__vector unsigned int){
+		(t_fn[0][x0 & 0xff] ^ t_fn[1][(x1 >> 8) & 0xff] ^ t_fn[2][(x2 >> 16) & 0xff] ^ t_fn[3][x3 >> 24]),
 		(t_fn[0][x1 & 0xff] ^ t_fn[1][(x2 >> 8) & 0xff] ^ t_fn[2][(x3 >> 16) & 0xff] ^ t_fn[3][x0 >> 24]),
-		(t_fn[0][x0 & 0xff] ^ t_fn[1][(x1 >> 8) & 0xff] ^ t_fn[2][(x2 >> 16) & 0xff] ^ t_fn[3][x3 >> 24]));
+    (t_fn[0][x2 & 0xff] ^ t_fn[1][(x3 >> 8) & 0xff] ^ t_fn[2][(x0 >> 16) & 0xff] ^ t_fn[3][x1 >> 24]),
+    (t_fn[0][x3 & 0xff] ^ t_fn[1][(x0 >> 8) & 0xff] ^ t_fn[2][(x1 >> 16) & 0xff] ^ t_fn[3][x2 >> 24])};
 
-	return vec_bitxor1q(out, key);
+
+
+return vec_xor(out, key);
 }
 
 uint8_t Sbox[256] = {		// forward s-box
@@ -202,11 +206,9 @@ uint32_t _rotr(uint32_t value, uint32_t amount)
 
 __m128i soft_aeskeygenassist(__m128i key, uint8_t rcon)
 {
-	//uint32_t X1 = _mm_cvtsi128_si32(vec_permute4sw(key, 0x55));
-	//uint32_t X3 = _mm_cvtsi128_si32(vec_permute4sw(key, 0xFF));
-	uint32_t X1 = vec_extractlowersw(vec_permute4sw(key, 0x55));
-	uint32_t X3 = vec_extractlowersw(vec_permute4sw(key, 0xFF));
-/*  uint8_t* t1 = (uint8_t*)&X1;
+	uint32_t X1 = ((uint32_t*)&key)[1];
+	uint32_t X3 = ((uint32_t*)&key)[3];
+  /*uint8_t* t1 = (uint8_t*)&X1;
   uint8_t* t3 = (uint8_t*)&X3;
     printf( " KEY: ");
     for(int i = 0; i< 16; ++i) printf("%02x ", ((uint8_t*)&key)[i]);
@@ -218,8 +220,8 @@ __m128i soft_aeskeygenassist(__m128i key, uint8_t rcon)
     for(int i = 0; i< 4; ++i) printf("%02x ",t3[i]);
     printf("\n");*/
 
-  *(vector unsigned char*)&X1 = __builtin_crypto_vsbox(*(vector unsigned char*)&X1);
-  *(vector unsigned char*)&X3 = __builtin_crypto_vsbox(*(vector unsigned char*)&X3);
+  *(__vector unsigned char*)&X1 = __builtin_crypto_vsbox(*(__vector unsigned char*)&X1);
+  *(__vector unsigned char*)&X3 = __builtin_crypto_vsbox(*(__vector unsigned char*)&X3);
 
 //  sub_word((uint8_t*)&X1);
 // 	sub_word((uint8_t*)&X3);
@@ -234,5 +236,5 @@ __m128i soft_aeskeygenassist(__m128i key, uint8_t rcon)
     for(int i = 0; i< 16; ++i) printf("%02x ", ((uint8_t*)&res)[i]);
     printf("\n");
   return res;*/
-  return vec_set4sw(_rotr(X3, 8) ^ rcon, X3,_rotr(X1, 8) ^ rcon, X1);
+  return ((__vector unsigned int){X1, _rotr(X1,8) ^ rcon, X3, _rotr(X3,8) ^ rcon});
 }

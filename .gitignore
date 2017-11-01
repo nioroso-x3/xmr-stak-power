@@ -7,6 +7,7 @@ config-debug.txt
 xmr-stak-power
 # tmp files
 *~
-
+*.swp
+xmrport.sh
 # merge original backup files
 *.orig

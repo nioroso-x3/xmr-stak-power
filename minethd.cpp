@@ -73,7 +73,6 @@ void thd_setaffinity(std::thread::native_handle_type h, uint64_t cpu_id)
 #include "executor.h"
 #include "minethd.h"
 #include "jconf.h"
-#include "crypto/vec128intlib.h"
 #include "crypto/cryptonight_altivec.h"
 #include "hwlocMemory.hpp"
 
@@ -297,8 +296,7 @@ char minethd::self_test()
 	if(!bResult)
 		printer::inst()->print_msg(L0,
 		    "Cryptonight hash self-test failed. This might be caused by bad compiler optimizations.");
-
-  return true;
+  return bResult;
 }
 
 std::map<int,minethd*>* minethd::thread_starter(miner_work& pWork)

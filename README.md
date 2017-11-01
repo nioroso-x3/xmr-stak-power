@@ -6,6 +6,8 @@ XMR-Stak-POWER is a universal Stratum pool miner and a fork of XMR-Stak-CPU. The
 
 To configure the reports shown above you need to edit the httpd_port variable. Then enable wifi on your phone and navigate to [miner ip address]:[httpd_port] in your phone browser. If you want to use the data in scripts, you can get the JSON version of the data at url [miner ip address]:[httpd_port]/api.json
 
+## Installing IBM compiler
+
 XMR-Stak-POWER will currently only compile with the GCC 6.3.1 compiler included in the IBM AT10.0 developer tools. [IBM Advance Toolchain](https://www.ibm.com/developerworks/community/wikis/home?lang=en#!/wiki/W51a7ffcf4dfd_4b40_9d82_446ebc23c550/page/IBM Advance Toolchain for PowerLinux Documentation)
 ## Compile guides
 
@@ -15,7 +17,7 @@ XMR-Stak-POWER will currently only compile with the GCC 6.3.1 compiler included 
 
 Here are some numbers:
 
-* **Dual POWER8 10C @ 2.8GHz, running 4 threads per core** - 1800 H/s
+* **Dual POWER8 10C @ 2.8GHz, running 4 threads per core** - 2000 H/s
 
 ## Default dev donation
 By default the miner will donate 0.88% of the hashpower.
