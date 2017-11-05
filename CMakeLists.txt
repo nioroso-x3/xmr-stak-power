@@ -146,10 +146,10 @@ endif()
 # Compile & Link
 ################################################################################
 
-# activate sse2 and aes-ni
+# activate POWER8 vector instructions
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -mcpu=power8 -flax-vector-conversions")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Ofast -mcpu=power8 -flax-vector-conversions")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -mcpu=native -mtune=native -m64 -mdirect-move -mcrypto -mpower8-vector -flax-vector-conversions")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Ofast -mcpu=native -mtune=native -m64 -mdirect-move -mcrypto -mpower8-vector -flax-vector-conversions")
 endif()
 
 # activate static libgcc and libstdc++ linking
