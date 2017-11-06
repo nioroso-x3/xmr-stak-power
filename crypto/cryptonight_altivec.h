@@ -101,6 +101,11 @@ static inline __m128i _mm_aesenc_si128(__m128i in, __m128i key)
   return v_rev(__builtin_crypto_vcipher(v_rev(in),v_rev(key)));
 }
 
+static inline __m128i _mm_aesenc_si128_be(__m128i in, __m128i key)
+{
+  return v_rev(__builtin_crypto_vcipher(in,v_rev(key)));
+}
+
 
 template<uint8_t rcon>
 static inline void aes_genkey_sub(__m128i* xout0, __m128i* xout2)
@@ -343,14 +348,19 @@ void cryptonight_hash(const void* input, size_t len, void* output, cryptonight_c
 	for(size_t i = 0; i < ITERATIONS; i++)
 	{
 		__m128i cx;
-		cx = vec_ld(0,(__m128i *)&l0[idx0 & 0x1FFFF0]);
+		__m128i *cx_mem_stor = (__m128i *)&l0[al0 & 0x1FFFF0];
+#ifdef vec_xl_be
+		cx = vec_xl_be(0,(unsigned char *)cx_mem_stor);
+#else
+		cx = v_rev(vec_vsx_ld(0,cx_mem_stor));
+#endif
 
 		if(SOFT_AES)
-			cx = soft_aesenc(cx, (__m128ll){al0, ah0});
+			cx = soft_aesenc(v_rev(cx), (__m128ll){al0, ah0});
 		else
-			cx = _mm_aesenc_si128(cx, (__m128ll){al0, ah0});
+			cx = _mm_aesenc_si128_be(cx, (__m128ll){al0, ah0});
 
-		vec_st(vec_xor(bx0, cx),0,(__m128i *)&l0[idx0 & 0x1FFFF0]);
+		vec_vsx_st(vec_xor(bx0, cx),0,cx_mem_stor);
 		idx0 = ((uint64_t*)&cx)[0];
 		bx0 = cx;
 
@@ -366,7 +376,6 @@ void cryptonight_hash(const void* input, size_t len, void* output, cryptonight_c
 		((uint64_t*)&l0[idx0 & 0x1FFFF0])[1] = ah0;
 		ah0 ^= ch;
 		al0 ^= cl;
-		idx0 = al0;
 	}
 	// Optim - 90% time boundary
 	cn_implode_scratchpad<MEM, SOFT_AES, PREFETCH>((__m128i*)ctx0->long_state, (__m128i*)ctx0->hash_state);
@@ -407,26 +416,26 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
 	for (size_t i = 0; i < ITERATIONS; i++)
 	{
 		__m128i cx;
-		cx = vec_ld(0,(__m128i *)&l0[idx0 & 0x1FFFF0]);
+		cx = vec_vsx_ld(0,(__m128i *)&l0[idx0 & 0x1FFFF0]);
 
 		if(SOFT_AES)
 			cx = soft_aesenc(cx,(__m128ll){ axl0,axh0});
 		else
 			cx = _mm_aesenc_si128(cx, (__m128ll){axl0,axh0});
 
-		vec_st(vec_xor(bx0, cx),0,(__m128i *)&l0[idx0 & 0x1FFFF0]);
+		vec_vsx_st(vec_xor(bx0, cx),0,(__m128i *)&l0[idx0 & 0x1FFFF0]);
 		idx0 = ((uint64_t*)&cx)[0];
 		bx0 = cx;
 
 
-		cx = vec_ld(0,(__m128i *)&l1[idx1 & 0x1FFFF0]);
+		cx = vec_vsx_ld(0,(__m128i *)&l1[idx1 & 0x1FFFF0]);
 
 		if(SOFT_AES)
 			cx = soft_aesenc(cx, (__m128ll){axl1,axh1});
 		else
 			cx = _mm_aesenc_si128(cx, (__m128ll){axl1, axh1});
 
-		vec_st(vec_xor(bx1, cx),0,(__m128i *)&l1[idx1 & 0x1FFFF0]);
+		vec_vsx_st(vec_xor(bx1, cx),0,(__m128i *)&l1[idx1 & 0x1FFFF0]);
 		idx1 = ((uint64_t*)&cx)[0];
 		bx1 = cx;
 
