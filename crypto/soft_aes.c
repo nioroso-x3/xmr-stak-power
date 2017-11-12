@@ -33,7 +33,7 @@
 #undef pixel
 #undef bool
 typedef __vector unsigned char __m128i;
-
+typedef __vector unsigned int __m128l;
 #define TABLE_ALIGN     32
 #define WPOLY           0x011b
 #define N_COLS          4
@@ -162,7 +162,7 @@ __m128i soft_aesenc(__m128i in, __m128i key)
 	x2 = ((uint32_t*)&in)[2];
 	x3 = ((uint32_t*)&in)[3];
 
-	__m128i out = (__vector unsigned int){
+	__m128i out = (__m128l){
 		(t_fn[0][x0 & 0xff] ^ t_fn[1][(x1 >> 8) & 0xff] ^ t_fn[2][(x2 >> 16) & 0xff] ^ t_fn[3][x3 >> 24]),
 		(t_fn[0][x1 & 0xff] ^ t_fn[1][(x2 >> 8) & 0xff] ^ t_fn[2][(x3 >> 16) & 0xff] ^ t_fn[3][x0 >> 24]),
     (t_fn[0][x2 & 0xff] ^ t_fn[1][(x3 >> 8) & 0xff] ^ t_fn[2][(x0 >> 16) & 0xff] ^ t_fn[3][x1 >> 24]),
@@ -173,7 +173,7 @@ __m128i soft_aesenc(__m128i in, __m128i key)
 return vec_xor(out, key);
 }
 
-uint8_t Sbox[256] = {		// forward s-box
+const uint8_t Sbox[256] = {		// forward s-box
 0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
 0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
 0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,
@@ -199,42 +199,25 @@ static inline void sub_word(uint8_t* key)
 	key[3] = Sbox[key[3]];
 }
 
-uint32_t _rotr(uint32_t value, uint32_t amount)
+static inline uint32_t _rotr(uint32_t value, uint32_t amount)
 {
 	return (value >> amount) | (value << ((32 - amount) & 31));
 }
 
+static inline void _rotr_ptr(uint32_t* value){
+ *value = (*value >> 8) | (*value << 24);
+}
+
+static inline void sub_word_and_rotr(__m128i* key){
+   *key = __builtin_crypto_vsbox(*key);
+   _rotr_ptr(((uint32_t*)key)+1);
+   _rotr_ptr(((uint32_t*)key)+3);
+}
+
 __m128i soft_aeskeygenassist(__m128i key, uint8_t rcon)
 {
-	uint32_t X1 = ((uint32_t*)&key)[1];
-	uint32_t X3 = ((uint32_t*)&key)[3];
-  /*uint8_t* t1 = (uint8_t*)&X1;
-  uint8_t* t3 = (uint8_t*)&X3;
-    printf( " KEY: ");
-    for(int i = 0; i< 16; ++i) printf("%02x ", ((uint8_t*)&key)[i]);
-    printf("\n");
-    printf( "  X1: ");
-    for(int i = 0; i< 4; ++i) printf("%02x ",t1[i]);
-    printf("\n");
-    printf( "  X3: ");
-    for(int i = 0; i< 4; ++i) printf("%02x ",t3[i]);
-    printf("\n");*/
-
-  *(__vector unsigned char*)&X1 = __builtin_crypto_vsbox(*(__vector unsigned char*)&X1);
-  *(__vector unsigned char*)&X3 = __builtin_crypto_vsbox(*(__vector unsigned char*)&X3);
-
-//  sub_word((uint8_t*)&X1);
-// 	sub_word((uint8_t*)&X3);
-/*    printf( " sX1: ");
-    for(int i = 0; i< 4; ++i) printf("%02x ",t1[i]);
-    printf("\n");
-    printf( " sX3: ");
-    for(int i = 0; i< 4; ++i) printf("%02x ",t3[i]);
-    printf("\n");
-  __m128i res = vec_set4sw(_rotr(X3, 8) ^ rcon, X3,_rotr(X1, 8) ^ rcon, X1);
-    printf( " RES: ");
-    for(int i = 0; i< 16; ++i) printf("%02x ", ((uint8_t*)&res)[i]);
-    printf("\n");
-  return res;*/
-  return ((__vector unsigned int){X1, _rotr(X1,8) ^ rcon, X3, _rotr(X3,8) ^ rcon});
+  key = vec_perm(key,key,(__m128i){0x4,0x5,0x6,0x7,0x4,0x5,0x6,0x7,0xc,0xd,0xe,0xf,0xc,0xd,0xe,0xf});
+  sub_word_and_rotr(&key);
+  __m128i rconv = (__m128l){0,(uint32_t)rcon,0,(uint32_t)rcon};
+  return vec_xor(key,rconv);
 }

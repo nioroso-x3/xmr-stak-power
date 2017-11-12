@@ -153,7 +153,7 @@
  *           It will never use slow memory, but it won't attempt to mlock
  * never   - If we fail to allocate large pages we will print an error and exit.
  */
-"use_slow_memory" : "always",
+"use_slow_memory" : "never",
 
 /*
  * NiceHash mode
@@ -171,7 +171,7 @@
  * 
  * WARNING: setting this to true on a CPU that doesn't support hardware AES will crash the miner.
  */
-"aes_override" : null,
+"aes_override" : true,
 
 /*
  * TLS Settings

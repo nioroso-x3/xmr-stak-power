@@ -364,9 +364,9 @@ minethd::cn_hash_fun minethd::func_selector(char bHaveAes, char bNoPrefetch)
 
 	std::bitset<2> digit;
 	digit.set(0, !bNoPrefetch);
-	digit.set(1, !bHaveAes);
+	digit.set(1, 0);
 
-	return func_table[digit.to_ulong()];
+	return func_table[0];
 }
 
 void minethd::pin_thd_affinity()
@@ -467,7 +467,7 @@ minethd::cn_hash_fun_dbl minethd::func_dbl_selector(char bHaveAes, char bNoPrefe
 	digit.set(0, !bNoPrefetch);
 	digit.set(1, !bHaveAes);
 
-	return func_table[digit.to_ulong()];
+	return func_table[0];
 }
 
 void minethd::double_work_main()

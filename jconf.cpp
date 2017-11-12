@@ -287,6 +287,7 @@ bool jconf::check_cpu_features()
 	bHaveSse2 = (cpu_info[3] & SSE2_BIT) != 0;
 
 	return bHaveSse2;*/
+  bHaveAes = true;
   return true;
 }
 
@@ -296,11 +297,6 @@ bool jconf::parse_config(const char* sFilename)
 	char * buffer;
 	size_t flen;
 
-	if(!check_cpu_features())
-	{
-		printer::inst()->print_msg(L0, "CPU support of SSE2 is required.");
-		return false;
-	}
 
 	pFile = fopen(sFilename, "rb");
 	if (pFile == NULL)
@@ -454,15 +450,9 @@ bool jconf::parse_config(const char* sFilename)
 #endif // _WIN32
 
 	printer::inst()->set_verbose_level(prv->configValues[iVerboseLevel]->GetUint64());
-
+   bHaveAes = true;
 	if(NeedsAutoconf())
 		return true;
-
-	if(prv->configValues[bAesOverride]->IsBool())
-		bHaveAes = prv->configValues[bAesOverride]->GetBool();
-
-	if(!bHaveAes)
-		printer::inst()->print_msg(L0, "Your CPU doesn't support hardware AES. Don't expect high hashrates.");
 
 	return true;
 }
