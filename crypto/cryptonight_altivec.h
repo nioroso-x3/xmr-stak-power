@@ -69,7 +69,7 @@ static inline __m128i sl_xor(__m128i tmp1)
 //  return vec_set4sw(t[0],t[1]^t[0],t[2]^t[1]^t[0],t[3]^t[2]^t[1]^t[0]);
 }
 
-static inline __m128i v_rev(const __m128i& tmp1)
+static inline __m128i v_rev(__m128i tmp1)
 {
   return(vec_perm(tmp1,(__m128i){0},(__m128i){ 0xf,0xe,0xd,0xc,0xb,0xa,0x9,0x8,0x7,0x6,0x5,0x4,0x3,0x2,0x1,0x0 })); 
 }
@@ -101,9 +101,18 @@ static inline __m128i _mm_aesenc_si128(__m128i in, __m128i key)
   return v_rev(__builtin_crypto_vcipher(v_rev(in),v_rev(key)));
 }
 
-static inline __m128i _mm_aesenc_si128_be(__m128i in, __m128i key)
+static inline __m128i _mm_aesenc_si128_beIN(__m128i in, __m128i key)
 {
   return v_rev(__builtin_crypto_vcipher(in,v_rev(key)));
+}
+
+static inline __m128i _mm_aesenc_si128_beK(__m128i in, __m128i key)
+{
+  return v_rev(__builtin_crypto_vcipher(v_rev(in),key));
+}
+static inline __m128i _mm_aesenc_si128_be(__m128i in, __m128i key)
+{
+  return __builtin_crypto_vcipher(in,key);
 }
 
 
@@ -143,30 +152,18 @@ static inline void aes_genkey(const __m128i* memory, __m128i* k0, __m128i* k1, _
 	*k0 = xout0;
 	*k1 = xout2;
 
-	if(SOFT_AES)
-		soft_aes_genkey_sub(&xout0, &xout2, 0x01);
-	else
 		aes_genkey_sub<0x01>(&xout0, &xout2);
 	*k2 = xout0;
 	*k3 = xout2;
 
-	if(SOFT_AES)
-		soft_aes_genkey_sub(&xout0, &xout2, 0x02);
-	else
 		aes_genkey_sub<0x02>(&xout0, &xout2);
 	*k4 = xout0;
 	*k5 = xout2;
 
-	if(SOFT_AES)
-		soft_aes_genkey_sub(&xout0, &xout2, 0x04);
-	else
 		aes_genkey_sub<0x04>(&xout0, &xout2);
 	*k6 = xout0;
 	*k7 = xout2;
 
-	if(SOFT_AES)
-		soft_aes_genkey_sub(&xout0, &xout2, 0x08);
-	else
 		aes_genkey_sub<0x08>(&xout0, &xout2);
 	*k8 = xout0;
 	*k9 = xout2;
@@ -184,7 +181,18 @@ static inline void aes_round(__m128i key, __m128i* x0, __m128i* x1, __m128i* x2,
 	*x7 = _mm_aesenc_si128(*x7, key);
 
 }
+static inline void aes_round_be(__m128i key, __m128i* x0, __m128i* x1, __m128i* x2, __m128i* x3, __m128i* x4, __m128i* x5, __m128i* x6, __m128i* x7)
+{
+	*x0 = _mm_aesenc_si128_be(*x0, key);
+	*x1 = _mm_aesenc_si128_be(*x1, key);
+	*x2 = _mm_aesenc_si128_be(*x2, key);
+	*x3 = _mm_aesenc_si128_be(*x3, key);
+	*x4 = _mm_aesenc_si128_be(*x4, key);
+	*x5 = _mm_aesenc_si128_be(*x5, key);
+	*x6 = _mm_aesenc_si128_be(*x6, key);
+	*x7 = _mm_aesenc_si128_be(*x7, key);
 
+}
 static inline void soft_aes_round(__m128i key, __m128i* x0, __m128i* x1, __m128i* x2, __m128i* x3, __m128i* x4, __m128i* x5, __m128i* x6, __m128i* x7)
 {
 	*x0 = soft_aesenc(*x0, key);
@@ -214,46 +222,46 @@ void cn_explode_scratchpad(const __m128i* input, __m128i* output)
 	xin5 = vec_ld(144,input);
 	xin6 = vec_ld(160,input);
 	xin7 = vec_ld(176,input);
+  xin0 = v_rev(xin0);
+  xin1 = v_rev(xin1);
+  xin2 = v_rev(xin2);
+  xin3 = v_rev(xin3);
+  xin4 = v_rev(xin4);
+  xin5 = v_rev(xin5);
+  xin6 = v_rev(xin6);
+  xin7 = v_rev(xin7);
+  k0 = v_rev(k0);
+  k1 = v_rev(k1);
+  k2 = v_rev(k2);
+  k3 = v_rev(k3);
+  k4 = v_rev(k4);
+  k5 = v_rev(k5);
+  k6 = v_rev(k6);
+  k7 = v_rev(k7);
+  k8 = v_rev(k8);
+  k9 = v_rev(k9);
 
 	for (size_t i = 0; i < MEM / sizeof(__m128i); i += 8)
 	{
-		if(SOFT_AES)
-		{
-			soft_aes_round(k0, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			soft_aes_round(k1, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			soft_aes_round(k2, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			soft_aes_round(k3, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			soft_aes_round(k4, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			soft_aes_round(k5, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			soft_aes_round(k6, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			soft_aes_round(k7, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			soft_aes_round(k8, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			soft_aes_round(k9, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-		}
-		else
-		{
-			aes_round(k0, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			aes_round(k1, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			aes_round(k2, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			aes_round(k3, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			aes_round(k4, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			aes_round(k5, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			aes_round(k6, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			aes_round(k7, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			aes_round(k8, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-			aes_round(k9, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
-		}
-
-		vec_st(xin0,i*16,output);
-		vec_st(xin1,(i+1)*16,output);
-		vec_st(xin2,(i+2)*16,output);
-		vec_st(xin3,(i+3)*16,output);
-
-
-		vec_st(xin4,(i+4)*16,output);
-		vec_st(xin5,(i+5)*16,output);
-		vec_st(xin6,(i+6)*16,output);
-		vec_st(xin7,(i+7)*16,output);
+			aes_round_be(k0, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round_be(k1, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round_be(k2, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round_be(k3, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round_be(k4, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round_be(k5, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round_be(k6, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round_be(k7, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round_be(k8, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round_be(k9, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+	
+		vec_st(v_rev(xin0),i*16,output);
+		vec_st(v_rev(xin1),(i+1)*16,output);
+		vec_st(v_rev(xin2),(i+2)*16,output);
+		vec_st(v_rev(xin3),(i+3)*16,output);
+		vec_st(v_rev(xin4),(i+4)*16,output);
+		vec_st(v_rev(xin5),(i+5)*16,output);
+		vec_st(v_rev(xin6),(i+6)*16,output);
+		vec_st(v_rev(xin7),(i+7)*16,output);
 
 	}
 }
@@ -275,56 +283,58 @@ void cn_implode_scratchpad(const __m128i* input, __m128i* output)
 	xout5 = vec_ld(144,output);
 	xout6 = vec_ld(160,output);
 	xout7 = vec_ld(176,output);
+  xout0 = v_rev(xout0);
+  xout1 = v_rev(xout1);
+  xout2 = v_rev(xout2);
+  xout3 = v_rev(xout3);
+  xout4 = v_rev(xout4);
+  xout5 = v_rev(xout5);
+  xout6 = v_rev(xout6);
+  xout7 = v_rev(xout7);
+  k0 = v_rev(k0);
+  k1 = v_rev(k1);
+  k2 = v_rev(k2);
+  k3 = v_rev(k3);
+  k4 = v_rev(k4);
+  k5 = v_rev(k5);
+  k6 = v_rev(k6);
+  k7 = v_rev(k7);
+  k8 = v_rev(k8);
+  k9 = v_rev(k9);
+
 
 	for (size_t i = 0; i < MEM / sizeof(__m128i); i += 8)
 	{
 
-		xout0 = vec_xor(vec_ld(i*16,input), xout0);
-		xout1 = vec_xor(vec_ld((i+1)*16,input), xout1);
-		xout2 = vec_xor(vec_ld((i+2)*16,input), xout2);
-		xout3 = vec_xor(vec_ld((i+3)*16,input), xout3);
+		xout0 = vec_xor(v_rev(vec_ld(i*16,input)), xout0);
+		xout1 = vec_xor(v_rev(vec_ld((i+1)*16,input)), xout1);
+		xout2 = vec_xor(v_rev(vec_ld((i+2)*16,input)), xout2);
+		xout3 = vec_xor(v_rev(vec_ld((i+3)*16,input)), xout3);
 
-		xout4 = vec_xor(vec_ld((i+4)*16,input), xout4);
-		xout5 = vec_xor(vec_ld((i+5)*16,input), xout5);
-		xout6 = vec_xor(vec_ld((i+6)*16,input), xout6);
-		xout7 = vec_xor(vec_ld((i+7)*16,input), xout7);
-
-		if(SOFT_AES)
-		{
-			soft_aes_round(k0, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			soft_aes_round(k1, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			soft_aes_round(k2, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			soft_aes_round(k3, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			soft_aes_round(k4, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			soft_aes_round(k5, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			soft_aes_round(k6, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			soft_aes_round(k7, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			soft_aes_round(k8, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			soft_aes_round(k9, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-		}
-		else
-		{
-			aes_round(k0, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			aes_round(k1, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			aes_round(k2, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			aes_round(k3, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			aes_round(k4, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			aes_round(k5, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			aes_round(k6, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			aes_round(k7, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			aes_round(k8, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-			aes_round(k9, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-		}
+		xout4 = vec_xor(v_rev(vec_ld((i+4)*16,input)), xout4);
+		xout5 = vec_xor(v_rev(vec_ld((i+5)*16,input)), xout5);
+		xout6 = vec_xor(v_rev(vec_ld((i+6)*16,input)), xout6);
+		xout7 = vec_xor(v_rev(vec_ld((i+7)*16,input)), xout7);
+		aes_round_be(k0, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+		aes_round_be(k1, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+		aes_round_be(k2, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+		aes_round_be(k3, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+		aes_round_be(k4, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+		aes_round_be(k5, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+		aes_round_be(k6, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+		aes_round_be(k7, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+		aes_round_be(k8, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+		aes_round_be(k9, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
 	}
 
-	vec_st(xout0,64,output);
-	vec_st(xout1,80,output);
-	vec_st(xout2,96,output);
-	vec_st(xout3,112,output);
-	vec_st(xout4,128,output);
-	vec_st(xout5,144,output);
-	vec_st(xout6,160,output);
-	vec_st(xout7,176,output);
+	vec_st(v_rev(xout0),64,output);
+	vec_st(v_rev(xout1),80,output);
+	vec_st(v_rev(xout2),96,output);
+	vec_st(v_rev(xout3),112,output);
+	vec_st(v_rev(xout4),128,output);
+	vec_st(v_rev(xout5),144,output);
+	vec_st(v_rev(xout6),160,output);
+	vec_st(v_rev(xout7),176,output);
 }
 
 template<size_t ITERATIONS, size_t MEM, bool SOFT_AES, bool PREFETCH>
@@ -342,7 +352,7 @@ void cryptonight_hash(const void* input, size_t len, void* output, cryptonight_c
 	uint64_t ah0 = h0[1] ^ h0[5];
 	__m128i bx0 = (__m128ll){h0[2] ^ h0[6],h0[3] ^ h0[7]};
 
-	uint64_t idx0 = h0[0] ^ h0[4];
+	uint64_t idx0 = al0;
 
 	// Optim - 90% time boundary
 	for(size_t i = 0; i < ITERATIONS; i++)
@@ -355,10 +365,7 @@ void cryptonight_hash(const void* input, size_t len, void* output, cryptonight_c
 		cx = v_rev(vec_vsx_ld(0,cx_mem_stor));
 #endif
 
-		if(SOFT_AES)
-			cx = soft_aesenc(v_rev(cx), (__m128ll){al0, ah0});
-		else
-			cx = _mm_aesenc_si128_be(cx, (__m128ll){al0, ah0});
+			cx = _mm_aesenc_si128_beIN(cx, (__m128ll){al0, ah0});
 
 		vec_vsx_st(vec_xor(bx0, cx),0,cx_mem_stor);
 		idx0 = ((uint64_t*)&cx)[0];
@@ -409,8 +416,8 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
 	uint64_t axh1 = h1[1] ^ h1[5];
 	__m128i bx1 = (__m128ll){h1[2] ^ h1[6],h1[3] ^ h1[7]} ;
 
-	uint64_t idx0 = h0[0] ^ h0[4];
-	uint64_t idx1 = h1[0] ^ h1[4];
+	uint64_t idx0 = axl0;
+	uint64_t idx1 = axl1;
 
 	// Optim - 90% time boundary
 	for (size_t i = 0; i < ITERATIONS; i++)
@@ -418,9 +425,6 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
 		__m128i cx;
 		cx = vec_vsx_ld(0,(__m128i *)&l0[idx0 & 0x1FFFF0]);
 
-		if(SOFT_AES)
-			cx = soft_aesenc(cx,(__m128ll){ axl0,axh0});
-		else
 			cx = _mm_aesenc_si128(cx, (__m128ll){axl0,axh0});
 
 		vec_vsx_st(vec_xor(bx0, cx),0,(__m128i *)&l0[idx0 & 0x1FFFF0]);
@@ -430,9 +434,6 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
 
 		cx = vec_vsx_ld(0,(__m128i *)&l1[idx1 & 0x1FFFF0]);
 
-		if(SOFT_AES)
-			cx = soft_aesenc(cx, (__m128ll){axl1,axh1});
-		else
 			cx = _mm_aesenc_si128(cx, (__m128ll){axl1, axh1});
 
 		vec_vsx_st(vec_xor(bx1, cx),0,(__m128i *)&l1[idx1 & 0x1FFFF0]);
