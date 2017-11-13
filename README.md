@@ -17,7 +17,7 @@ XMR-Stak-POWER will currently only compile with the GCC 6.3.1 compiler included 
 
 Here are some numbers:
 
-* **Dual POWER8 10C @ 2.8GHz, running 4 threads per core, hugepages enabled** - 3500 H/s @ 540W
+* **Dual POWER8 10C @ 2.8GHz, running 4 threads per core, hugepages enabled** - 3550 H/s @ 540W
 * **Dual POWER9-SMT4 16C @ ??? GHz, hugepages enabled** - 2950 H/s @ 350W (old version benchmark)
 
 ## Default dev donation

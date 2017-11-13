@@ -204,8 +204,17 @@ static inline uint32_t _rotr(uint32_t value, uint32_t amount)
 	return (value >> amount) | (value << ((32 - amount) & 31));
 }
 
+static inline uint32_t _rotl(uint32_t value, uint32_t amount)
+{
+	return (value << amount) | (value >> ((32 - amount) & 31));
+}
+
 static inline void _rotr_ptr(uint32_t* value){
  *value = (*value >> 8) | (*value << 24);
+}
+
+static inline void _rotl_ptr(uint32_t* value){
+ *value = (*value << 8) | (*value >> 24);
 }
 
 static inline void sub_word_and_rotr(__m128i* key){
@@ -214,10 +223,26 @@ static inline void sub_word_and_rotr(__m128i* key){
    _rotr_ptr(((uint32_t*)key)+3);
 }
 
+static inline void sub_word_and_rotl(__m128i* key){
+   *key = __builtin_crypto_vsbox(*key);
+   _rotl_ptr(((uint32_t*)key));
+   _rotl_ptr(((uint32_t*)key)+2);
+}
+
 __m128i soft_aeskeygenassist(__m128i key, uint8_t rcon)
 {
   key = vec_perm(key,key,(__m128i){0x4,0x5,0x6,0x7,0x4,0x5,0x6,0x7,0xc,0xd,0xe,0xf,0xc,0xd,0xe,0xf});
   sub_word_and_rotr(&key);
   __m128i rconv = (__m128l){0,(uint32_t)rcon,0,(uint32_t)rcon};
+  return vec_xor(key,rconv);
+}
+
+__m128i soft_aeskeygenassist_be(__m128i key, uint8_t rcon)
+{
+  key = vec_perm(key,key,(__m128i){0x0,0x1,0x2,0x3,0x0,0x1,0x2,0x3,0x8,0x9,0xa,0xb,0x8,0x9,0xa,0xb});
+  sub_word_and_rotl(&key);
+  uint32_t rcon_be = 0;
+  ((uint8_t*)&rcon_be)[3] = rcon;
+  __m128i rconv = (__m128l){rcon_be,0,rcon_be,0};
   return vec_xor(key,rconv);
 }
