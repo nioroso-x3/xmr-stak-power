@@ -42,7 +42,6 @@ extern "C"
 	void keccakf(uint64_t st[25], int rounds);
 	extern void(*const extra_hashes[4])(const void *, size_t, char *);
 
-	__m128i soft_aesenc(__m128i in, __m128i key);
 	__m128i soft_aeskeygenassist(__m128i key, uint8_t rcon);
 }
 
@@ -129,19 +128,6 @@ static inline void aes_genkey_sub(__m128i* xout0, __m128i* xout2)
 	*xout2 = vec_xor(*xout2, xout1);
 }
 
-static inline void soft_aes_genkey_sub(__m128i* xout0, __m128i* xout2, uint8_t rcon)
-{
-	__m128i xout1 = soft_aeskeygenassist(*xout2, rcon);
-  xout1 = vec_perm(xout1,xout1,(__m128i){0xc,0xd,0xe,0xf,0xc,0xd,0xe,0xf,0xc,0xd,0xe,0xf,0xc,0xd,0xe,0xf}); 
-  *xout0 = sl_xor(*xout0);
-	*xout0 = vec_xor(*xout0, xout1);
-	xout1 = soft_aeskeygenassist(*xout0, 0x00);
-  xout1 = vec_perm(xout1,xout1,(__m128i){0x8,0x9,0xa,0xb,0x8,0x9,0xa,0xb,0x8,0x9,0xa,0xb,0x8,0x9,0xa,0xb});
-	*xout2 = sl_xor(*xout2);
-	*xout2 = vec_xor(*xout2, xout1);
-}
-
-template<bool SOFT_AES>
 static inline void aes_genkey(const __m128i* memory, __m128i* k0, __m128i* k1, __m128i* k2, __m128i* k3,
 	__m128i* k4, __m128i* k5, __m128i* k6, __m128i* k7, __m128i* k8, __m128i* k9)
 {
@@ -193,26 +179,56 @@ static inline void aes_round_be(__m128i key, __m128i* x0, __m128i* x1, __m128i* 
 	*x7 = _mm_aesenc_si128_be(*x7, key);
 
 }
-static inline void soft_aes_round(__m128i key, __m128i* x0, __m128i* x1, __m128i* x2, __m128i* x3, __m128i* x4, __m128i* x5, __m128i* x6, __m128i* x7)
-{
-	*x0 = soft_aesenc(*x0, key);
-	*x1 = soft_aesenc(*x1, key);
-	*x2 = soft_aesenc(*x2, key);
-	*x3 = soft_aesenc(*x3, key);
-	*x4 = soft_aesenc(*x4, key);
-	*x5 = soft_aesenc(*x5, key);
-	*x6 = soft_aesenc(*x6, key);
-	*x7 = soft_aesenc(*x7, key);
-}
 
-template<size_t MEM, bool SOFT_AES, bool PREFETCH>
+template<size_t MEM>
 void cn_explode_scratchpad(const __m128i* input, __m128i* output)
 {
 	// This is more than we have registers, compiler will assign 2 keys on the stack
 	__m128i xin0, xin1, xin2, xin3, xin4, xin5, xin6, xin7;
 	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9;
 
-	aes_genkey<SOFT_AES>(input, &k0, &k1, &k2, &k3, &k4, &k5, &k6, &k7, &k8, &k9);
+	aes_genkey(input, &k0, &k1, &k2, &k3, &k4, &k5, &k6, &k7, &k8, &k9);
+
+	xin0 = vec_ld(64,input);
+	xin1 = vec_ld(80,input);
+	xin2 = vec_ld(96,input);
+	xin3 = vec_ld(112,input);
+	xin4 = vec_ld(128,input);
+	xin5 = vec_ld(144,input);
+	xin6 = vec_ld(160,input);
+	xin7 = vec_ld(176,input);
+	for (size_t i = 0; i < MEM / sizeof(__m128i); i += 8)
+	{
+      aes_round(k0, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round(k1, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round(k2, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round(k3, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round(k4, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round(k5, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round(k6, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round(k7, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round(k8, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+			aes_round(k9, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+	
+  		vec_st(xin0,i*16,output);
+  		vec_st(xin1,(i+1)*16,output);
+  		vec_st(xin2,(i+2)*16,output);
+  		vec_st(xin3,(i+3)*16,output);
+  		vec_st(xin4,(i+4)*16,output);
+  		vec_st(xin5,(i+5)*16,output);
+	  	vec_st(xin6,(i+6)*16,output);
+  		vec_st(xin7,(i+7)*16,output);
+	}
+}
+
+template<size_t MEM>
+void cn_explode_scratchpad_be(const __m128i* input, __m128i* output)
+{
+	// This is more than we have registers, compiler will assign 2 keys on the stack
+	__m128i xin0, xin1, xin2, xin3, xin4, xin5, xin6, xin7;
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9;
+
+	aes_genkey(input, &k0, &k1, &k2, &k3, &k4, &k5, &k6, &k7, &k8, &k9);
 
 	xin0 = vec_ld(64,input);
 	xin1 = vec_ld(80,input);
@@ -240,10 +256,9 @@ void cn_explode_scratchpad(const __m128i* input, __m128i* output)
   k7 = v_rev(k7);
   k8 = v_rev(k8);
   k9 = v_rev(k9);
-
 	for (size_t i = 0; i < MEM / sizeof(__m128i); i += 8)
 	{
-			aes_round_be(k0, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
+      aes_round_be(k0, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
 			aes_round_be(k1, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
 			aes_round_be(k2, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
 			aes_round_be(k3, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
@@ -254,26 +269,25 @@ void cn_explode_scratchpad(const __m128i* input, __m128i* output)
 			aes_round_be(k8, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
 			aes_round_be(k9, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
 	
-		vec_st(v_rev(xin0),i*16,output);
-		vec_st(v_rev(xin1),(i+1)*16,output);
-		vec_st(v_rev(xin2),(i+2)*16,output);
-		vec_st(v_rev(xin3),(i+3)*16,output);
-		vec_st(v_rev(xin4),(i+4)*16,output);
-		vec_st(v_rev(xin5),(i+5)*16,output);
-		vec_st(v_rev(xin6),(i+6)*16,output);
-		vec_st(v_rev(xin7),(i+7)*16,output);
-
+	  	vec_st(v_rev(xin0),i*16,output);
+  		vec_st(v_rev(xin1),(i+1)*16,output);
+  		vec_st(v_rev(xin2),(i+2)*16,output);
+  		vec_st(v_rev(xin3),(i+3)*16,output);
+  		vec_st(v_rev(xin4),(i+4)*16,output);
+  		vec_st(v_rev(xin5),(i+5)*16,output);
+  		vec_st(v_rev(xin6),(i+6)*16,output);
+  		vec_st(v_rev(xin7),(i+7)*16,output);
 	}
 }
 
-template<size_t MEM, bool SOFT_AES, bool PREFETCH>
-void cn_implode_scratchpad(const __m128i* input, __m128i* output)
+template<size_t MEM>
+void cn_implode_scratchpad_be(const __m128i* input, __m128i* output)
 {
 	// This is more than we have registers, compiler will assign 2 keys on the stack
 	__m128i xout0, xout1, xout2, xout3, xout4, xout5, xout6, xout7;
 	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9;
 
-	aes_genkey<SOFT_AES>(output + 2, &k0, &k1, &k2, &k3, &k4, &k5, &k6, &k7, &k8, &k9);
+	aes_genkey(output + 2, &k0, &k1, &k2, &k3, &k4, &k5, &k6, &k7, &k8, &k9);
 
 	xout0 = vec_ld(64,output);
 	xout1 = vec_ld(80,output);
@@ -302,39 +316,86 @@ void cn_implode_scratchpad(const __m128i* input, __m128i* output)
   k8 = v_rev(k8);
   k9 = v_rev(k9);
 
+	for (size_t i = 0; i < MEM / sizeof(__m128i); i += 8)
+	{
+ 		xout0 = vec_xor(v_rev(vec_ld(i*16,input)), xout0);
+ 		xout1 = vec_xor(v_rev(vec_ld((i+1)*16,input)), xout1);
+ 		xout2 = vec_xor(v_rev(vec_ld((i+2)*16,input)), xout2);
+ 		xout3 = vec_xor(v_rev(vec_ld((i+3)*16,input)), xout3);
+ 		xout4 = vec_xor(v_rev(vec_ld((i+4)*16,input)), xout4);
+ 		xout5 = vec_xor(v_rev(vec_ld((i+5)*16,input)), xout5);
+ 		xout6 = vec_xor(v_rev(vec_ld((i+6)*16,input)), xout6);
+ 		xout7 = vec_xor(v_rev(vec_ld((i+7)*16,input)), xout7);
+
+    aes_round_be(k0, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round_be(k1, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round_be(k2, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round_be(k3, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round_be(k4, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+  	aes_round_be(k5, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round_be(k6, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round_be(k7, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round_be(k8, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round_be(k9, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+	}
+ 	vec_st(v_rev(xout0),64,output);
+ 	vec_st(v_rev(xout1),80,output);
+ 	vec_st(v_rev(xout2),96,output);
+ 	vec_st(v_rev(xout3),112,output);
+ 	vec_st(v_rev(xout4),128,output);
+ 	vec_st(v_rev(xout5),144,output);
+ 	vec_st(v_rev(xout6),160,output);
+ 	vec_st(v_rev(xout7),176,output);
+  
+}
+template<size_t MEM>
+void cn_implode_scratchpad(const __m128i* input, __m128i* output)
+{
+	// This is more than we have registers, compiler will assign 2 keys on the stack
+	__m128i xout0, xout1, xout2, xout3, xout4, xout5, xout6, xout7;
+	__m128i k0, k1, k2, k3, k4, k5, k6, k7, k8, k9;
+
+	aes_genkey(output + 2, &k0, &k1, &k2, &k3, &k4, &k5, &k6, &k7, &k8, &k9);
+
+	xout0 = vec_ld(64,output);
+	xout1 = vec_ld(80,output);
+	xout2 = vec_ld(96,output);
+	xout3 = vec_ld(112,output);
+	xout4 = vec_ld(128,output);
+	xout5 = vec_ld(144,output);
+	xout6 = vec_ld(160,output);
+	xout7 = vec_ld(176,output);
 
 	for (size_t i = 0; i < MEM / sizeof(__m128i); i += 8)
 	{
+		xout0 = vec_xor(vec_ld(i*16,input), xout0);
+ 		xout1 = vec_xor(vec_ld((i+1)*16,input), xout1);
+ 		xout2 = vec_xor(vec_ld((i+2)*16,input), xout2);
+ 		xout3 = vec_xor(vec_ld((i+3)*16,input), xout3);
+ 		xout4 = vec_xor(vec_ld((i+4)*16,input), xout4);
+ 		xout5 = vec_xor(vec_ld((i+5)*16,input), xout5);
+ 		xout6 = vec_xor(vec_ld((i+6)*16,input), xout6);
+ 		xout7 = vec_xor(vec_ld((i+7)*16,input), xout7);
 
-		xout0 = vec_xor(v_rev(vec_ld(i*16,input)), xout0);
-		xout1 = vec_xor(v_rev(vec_ld((i+1)*16,input)), xout1);
-		xout2 = vec_xor(v_rev(vec_ld((i+2)*16,input)), xout2);
-		xout3 = vec_xor(v_rev(vec_ld((i+3)*16,input)), xout3);
-
-		xout4 = vec_xor(v_rev(vec_ld((i+4)*16,input)), xout4);
-		xout5 = vec_xor(v_rev(vec_ld((i+5)*16,input)), xout5);
-		xout6 = vec_xor(v_rev(vec_ld((i+6)*16,input)), xout6);
-		xout7 = vec_xor(v_rev(vec_ld((i+7)*16,input)), xout7);
-		aes_round_be(k0, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-		aes_round_be(k1, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-		aes_round_be(k2, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-		aes_round_be(k3, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-		aes_round_be(k4, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-		aes_round_be(k5, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-		aes_round_be(k6, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-		aes_round_be(k7, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-		aes_round_be(k8, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
-		aes_round_be(k9, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+    aes_round(k0, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round(k1, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round(k2, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round(k3, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round(k4, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+  	aes_round(k5, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round(k6, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round(k7, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round(k8, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
+ 		aes_round(k9, &xout0, &xout1, &xout2, &xout3, &xout4, &xout5, &xout6, &xout7);
 	}
-
-	vec_st(v_rev(xout0),64,output);
-	vec_st(v_rev(xout1),80,output);
-	vec_st(v_rev(xout2),96,output);
-	vec_st(v_rev(xout3),112,output);
-	vec_st(v_rev(xout4),128,output);
-	vec_st(v_rev(xout5),144,output);
-	vec_st(v_rev(xout6),160,output);
-	vec_st(v_rev(xout7),176,output);
+   	vec_st(xout0,64,output);
+  	vec_st(xout1,80,output);
+  	vec_st(xout2,96,output);
+  	vec_st(xout3,112,output);
+  	vec_st(xout4,128,output);
+  	vec_st(xout5,144,output);
+  	vec_st(xout6,160,output);
+  	vec_st(xout7,176,output);
 }
 
 template<size_t ITERATIONS, size_t MEM, bool SOFT_AES, bool PREFETCH>
@@ -343,7 +404,8 @@ void cryptonight_hash(const void* input, size_t len, void* output, cryptonight_c
 	keccak((const uint8_t *)input, len, ctx0->hash_state, 200);
 
 	// Optim - 99% time boundary
-	cn_explode_scratchpad<MEM, SOFT_AES, PREFETCH>((__m128i*)ctx0->hash_state, (__m128i*)ctx0->long_state);
+	if(PREFETCH) cn_explode_scratchpad_be<MEM>((__m128i*)ctx0->hash_state, (__m128i*)ctx0->long_state);
+  else cn_explode_scratchpad<MEM>((__m128i*)ctx0->hash_state, (__m128i*)ctx0->long_state);
 
 	uint8_t* l0 = ctx0->long_state;
 	uint64_t* h0 = (uint64_t*)ctx0->hash_state;
@@ -365,7 +427,7 @@ void cryptonight_hash(const void* input, size_t len, void* output, cryptonight_c
 		cx = v_rev(vec_vsx_ld(0,cx_mem_stor));
 #endif
 
-			cx = _mm_aesenc_si128_beIN(cx, (__m128ll){al0, ah0});
+		cx = _mm_aesenc_si128_beIN(cx, (__m128ll){al0, ah0});
 
 		vec_vsx_st(vec_xor(bx0, cx),0,cx_mem_stor);
 		idx0 = ((uint64_t*)&cx)[0];
@@ -385,7 +447,9 @@ void cryptonight_hash(const void* input, size_t len, void* output, cryptonight_c
 		al0 ^= cl;
 	}
 	// Optim - 90% time boundary
-	cn_implode_scratchpad<MEM, SOFT_AES, PREFETCH>((__m128i*)ctx0->long_state, (__m128i*)ctx0->hash_state);
+	if(PREFETCH) cn_implode_scratchpad_be<MEM>((__m128i*)ctx0->long_state, (__m128i*)ctx0->hash_state);
+  else cn_implode_scratchpad<MEM>((__m128i*)ctx0->long_state, (__m128i*)ctx0->hash_state);
+
 	// Optim - 99% time boundary
 	keccakf((uint64_t*)ctx0->hash_state, 24);
 	extra_hashes[ctx0->hash_state[0] & 3](ctx0->hash_state, 200, (char*)output);
@@ -401,9 +465,13 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
 	keccak((const uint8_t *)input+len, len, ctx1->hash_state, 200);
 
 	// Optim - 99% time boundary
-	cn_explode_scratchpad<MEM, SOFT_AES, PREFETCH>((__m128i*)ctx0->hash_state, (__m128i*)ctx0->long_state);
-	cn_explode_scratchpad<MEM, SOFT_AES, PREFETCH>((__m128i*)ctx1->hash_state, (__m128i*)ctx1->long_state);
-
+	if(PREFETCH){
+    cn_explode_scratchpad_be<MEM>((__m128i*)ctx0->hash_state, (__m128i*)ctx0->long_state);
+	  cn_explode_scratchpad_be<MEM>((__m128i*)ctx1->hash_state, (__m128i*)ctx1->long_state);
+  }else{
+    cn_explode_scratchpad<MEM>((__m128i*)ctx0->hash_state, (__m128i*)ctx0->long_state);
+	  cn_explode_scratchpad<MEM>((__m128i*)ctx1->hash_state, (__m128i*)ctx1->long_state);
+  }
 	uint8_t* l0 = ctx0->long_state;
 	uint64_t* h0 = (uint64_t*)ctx0->hash_state;
 	uint8_t* l1 = ctx1->long_state;
@@ -425,7 +493,7 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
 		__m128i cx;
 		cx = vec_vsx_ld(0,(__m128i *)&l0[idx0 & 0x1FFFF0]);
 
-			cx = _mm_aesenc_si128(cx, (__m128ll){axl0,axh0});
+		cx = _mm_aesenc_si128(cx, (__m128ll){axl0,axh0});
 
 		vec_vsx_st(vec_xor(bx0, cx),0,(__m128i *)&l0[idx0 & 0x1FFFF0]);
 		idx0 = ((uint64_t*)&cx)[0];
@@ -434,7 +502,7 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
 
 		cx = vec_vsx_ld(0,(__m128i *)&l1[idx1 & 0x1FFFF0]);
 
-			cx = _mm_aesenc_si128(cx, (__m128ll){axl1, axh1});
+		cx = _mm_aesenc_si128(cx, (__m128ll){axl1, axh1});
 
 		vec_vsx_st(vec_xor(bx1, cx),0,(__m128i *)&l1[idx1 & 0x1FFFF0]);
 		idx1 = ((uint64_t*)&cx)[0];
@@ -472,9 +540,13 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
 	}
 
 	// Optim - 90% time boundary
-	cn_implode_scratchpad<MEM, SOFT_AES, PREFETCH>((__m128i*)ctx0->long_state, (__m128i*)ctx0->hash_state);
-	cn_implode_scratchpad<MEM, SOFT_AES, PREFETCH>((__m128i*)ctx1->long_state, (__m128i*)ctx1->hash_state);
-
+	if(PREFETCH){
+    cn_implode_scratchpad_be<MEM>((__m128i*)ctx0->long_state, (__m128i*)ctx0->hash_state);
+  	cn_implode_scratchpad_be<MEM>((__m128i*)ctx1->long_state, (__m128i*)ctx1->hash_state);
+  }else{
+    cn_implode_scratchpad<MEM>((__m128i*)ctx0->long_state, (__m128i*)ctx0->hash_state);
+  	cn_implode_scratchpad<MEM>((__m128i*)ctx1->long_state, (__m128i*)ctx1->hash_state);
+  }
 	// Optim - 99% time boundary
 
 	keccakf((uint64_t*)ctx0->hash_state, 24);
