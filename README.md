@@ -17,7 +17,7 @@ XMR-Stak-POWER will currently only compile with the GCC 6.3.1 compiler included 
 
 Here are some numbers:
 
-* **Dual POWER8 10C @ 2.8GHz, running 4 threads per core, hugepages enabled** - 3550 H/s @ 540W
+* **Dual POWER8 10C @ 2.8GHz, running 2 threads per core, hugepages enabled** - 3550 H/s @ 530W
 * **Dual POWER9-SMT4 16C @ ??? GHz, hugepages enabled** - 2950 H/s @ 350W (old version benchmark)
 
 ## Default dev donation
@@ -63,7 +63,7 @@ or
 `make -j install` for faster parallel build
 and install.
 
-### xmr-stak-cpu Compile Options
+### xmr-stak-power Compile Options
 - `CMAKE_INSTALL_PREFIX` install miner to the home folder
   - `cmake . -DCMAKE_INSTALL_PREFIX=$HOME/xmr-stak-cpu`
   - you can find the binary and the `config.txt` file after `make install` in `$HOME/xmr-stak-cpu/bin`

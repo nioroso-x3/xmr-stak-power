@@ -25,16 +25,23 @@
 
 typedef __vector unsigned long long __m128ll;
 typedef __vector unsigned char __m128i;
-static inline uint64_t _umul128(uint64_t a, uint64_t b, uint64_t* hi)
+static inline void _umul128(uint64_t a, uint64_t b, uint64_t* hi,uint64_t *lo)
 {
-  unsigned __int128 r = (unsigned __int128)a * (unsigned __int128)b;
-  *hi = r >> 64;
-  return (uint64_t)r;
+  asm(
+  "mulld  %0, %1, %2" : 
+  "=r" (*lo) : 
+  "r" (a), 
+  "r" (b)); 
+  asm(
+  "mulhdu %0, %1, %2" : 
+  "=r" (*hi) : 
+  "r" (a), 
+  "r" (b));
+   
+  //unsigned __int128 r = (unsigned __int128)a * (unsigned __int128)b;
+  //*hi = r >> 64;
+  //return (uint64_t)r;
 }
-
-#if !defined(_LP64) && !defined(_WIN64)
-#error You are trying to do a 32-bit build. This will all end in tears. I know it.
-#endif
 
 extern "C"
 {
@@ -445,7 +452,7 @@ void cryptonight_hash(const void* input, size_t len, void* output, cryptonight_c
     cl = ((uint64_t*)&l0[idx0 & 0x1FFFF0])[0];
     ch = ((uint64_t*)&l0[idx0 & 0x1FFFF0])[1];
 
-    lo = _umul128(idx0, cl, &hi);
+    _umul128(idx0, cl, &hi,&lo);
 
     al0 += hi;
     ah0 += lo;
@@ -521,7 +528,7 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
     cl = ((uint64_t*)&l0[idx0 & 0x1FFFF0])[0];
     ch = ((uint64_t*)&l0[idx0 & 0x1FFFF0])[1];
 
-    lo = _umul128(idx0, cl, &hi);
+    _umul128(idx0, cl, &hi,&lo);
 
     axl0 += hi;
     axh0 += lo;
@@ -535,7 +542,7 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
     cl = ((uint64_t*)&l1[idx1 & 0x1FFFF0])[0];
     ch = ((uint64_t*)&l1[idx1 & 0x1FFFF0])[1];
 
-    lo = _umul128(idx1, cl, &hi);
+    _umul128(idx1, cl, &hi,&lo);
 
     axl1 += hi;
     axh1 += lo;
