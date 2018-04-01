@@ -1,3 +1,5 @@
+New version at https://github.com/nioroso-x3/xmr-stak
+
 # XMR-Stak-POWER - Monero mining software for POWER8 and later
 
 XMR-Stak-POWER is a universal Stratum pool miner and a fork of XMR-Stak-CPU. There is also an [AMD GPU version](https://github.com/fireice-uk/xmr-stak-amd) and an [NVIDIA GPU version](https://github.com/fireice-uk/xmr-stak-nvidia)
