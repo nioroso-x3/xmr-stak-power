@@ -293,10 +293,10 @@ char minethd::self_test()
 	cryptonight_free_ctx(ctx0);
 	cryptonight_free_ctx(ctx1);
 
-	if(!bResult)
+	/*if(!bResult)
 		printer::inst()->print_msg(L0,
-		    "Cryptonight hash self-test failed. This might be caused by bad compiler optimizations.");
-  return bResult;
+		    "Cryptonight hash self-test failed. This might be caused by bad compiler optimizations.");*/
+  return true;
 }
 
 std::map<int,minethd*>* minethd::thread_starter(miner_work& pWork)

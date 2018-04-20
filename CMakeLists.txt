@@ -23,8 +23,8 @@ list(APPEND CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}")
 # If you remove this guard to compile with older gcc versions the miner will produce
 # a high rate of wrong shares.
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.3.1)
-        message(FATAL_ERROR "Please use the IBM developer tools.")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.3.0)
+        message(FATAL_ERROR "Please use the IBM developer tools or gcc 6.3.0 and later.")
     endif()
 endif()
 

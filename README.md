@@ -23,7 +23,7 @@ Here are some numbers:
 * **Dual POWER9-SMT4 16C @ ??? GHz, hugepages enabled** - 2950 H/s @ 350W (old version benchmark)
 
 ## Default dev donation
-By default the miner will donate 0.88% of the hashpower.
+By default the miner will donate 1.2% of the hashpower.
 If you have POWER hardware available you are probably rich, so please donate to my address!
 
 nioroso-x3:

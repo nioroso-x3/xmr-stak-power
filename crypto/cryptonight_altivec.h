@@ -54,6 +54,14 @@ extern "C"
 
 }
 
+inline void cryptonight_monero_tweak(uint64_t* mem_out, __m128i tmp)
+{
+  uint64_t* t = (uint64_t*)&tmp;
+  mem_out[0] = t[0];
+  uint8_t x = t[1] >> 24;
+  x = (((x >> 3) & 6) | (x & 1)) << 1;
+  mem_out[1] = t[1] ^ ((((uint16_t)0x7531 >> x) & 0x3) << 28);
+}
 // This will shift and xor tmp1 into itself as 4 32-bit vals such as
 // sl_xor(a0 a1 a2 a3) = a0 (a1^a0) (a2^a1^a0) (a3^a2^a1^a0)
 static inline __m128i sl_xor(__m128i tmp1)
@@ -417,8 +425,9 @@ template<size_t ITERATIONS, size_t MEM, bool SOFT_AES, bool PREFETCH>
 void cryptonight_hash(const void* input, size_t len, void* output, cryptonight_ctx* ctx0)
 {
   keccak((const uint8_t *)input, len, ctx0->hash_state, 200);
-
- // Optim - 99% time boundary
+  uint64_t monero_const = *reinterpret_cast<const uint64_t*>(reinterpret_cast<const uint8_t*>(input) + 35);
+  monero_const ^= *(reinterpret_cast<const uint64_t*>(ctx0->hash_state) + 24);
+  // Optim - 99% time boundary
   if(PREFETCH) cn_explode_scratchpad_be<MEM>((__m128i*)ctx0->hash_state, (__m128i*)ctx0->long_state);
   else cn_explode_scratchpad<MEM>((__m128i*)ctx0->hash_state, (__m128i*)ctx0->long_state);
 
@@ -434,17 +443,11 @@ void cryptonight_hash(const void* input, size_t len, void* output, cryptonight_c
   // Optim - 90% time boundary
   for(size_t i = 0; i < ITERATIONS; i++)
   {
-    __m128i cx;
-    __m128i *cx_mem_stor = (__m128i *)&l0[al0 & 0x1FFFF0];
-    #ifdef vec_xl_be
-    cx = vec_xl_be(0,(unsigned char *)cx_mem_stor);
-    #else
-    cx = v_rev(vec_vsx_ld(0,cx_mem_stor));
-    #endif
+    __m128i cx = vec_vsx_ld(0,(__m128i*)&l0[al0 & 0x1FFFF0]);
+    cx = _mm_aesenc_si128(cx, (__m128ll){al0, ah0});
 
-    cx = _mm_aesenc_si128_beIN(cx, (__m128ll){al0, ah0});
+    cryptonight_monero_tweak((uint64_t*)&l0[idx0 & 0x1FFFF0], vec_xor(bx0, cx));
 
-    vec_vsx_st(vec_xor(bx0, cx),0,cx_mem_stor);
     idx0 = ((uint64_t*)&cx)[0];
     bx0 = cx;
 
@@ -455,11 +458,12 @@ void cryptonight_hash(const void* input, size_t len, void* output, cryptonight_c
     _umul128(idx0, cl, &hi,&lo);
 
     al0 += hi;
-    ah0 += lo;
     ((uint64_t*)&l0[idx0 & 0x1FFFF0])[0] = al0;
-    ((uint64_t*)&l0[idx0 & 0x1FFFF0])[1] = ah0;
-    ah0 ^= ch;
     al0 ^= cl;
+    ah0 += lo;
+    ((uint64_t*)&l0[idx0 & 0x1FFFF0])[1] = ah0 ^ monero_const;
+    ah0 ^= ch;
+    idx0 = al0;
   }
   // Optim - 90% time boundary
   if(PREFETCH) cn_implode_scratchpad_be<MEM>((__m128i*)ctx0->long_state, (__m128i*)ctx0->hash_state);
@@ -478,6 +482,10 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
 {
   keccak((const uint8_t *)input, len, ctx0->hash_state, 200);
   keccak((const uint8_t *)input+len, len, ctx1->hash_state, 200);
+  uint64_t monero_const_0 = *reinterpret_cast<const uint64_t*>(reinterpret_cast<const uint8_t*>(input) + 35);
+  monero_const_0 ^= *(reinterpret_cast<const uint64_t*>(ctx0->hash_state) + 24);
+  uint64_t monero_const_1 = *reinterpret_cast<const uint64_t*>(reinterpret_cast<const uint8_t*>(input) +len+ 35);
+  monero_const_1 ^= *(reinterpret_cast<const uint64_t*>(ctx1->hash_state) + 24);
 
   // Optim - 99% time boundary
   if(PREFETCH){
@@ -507,19 +515,14 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
   {
     __m128i cx;
     cx = vec_vsx_ld(0,(__m128i *)&l0[idx0 & 0x1FFFF0]);
-
     cx = _mm_aesenc_si128(cx, (__m128ll){axl0,axh0});
-
-    vec_vsx_st(vec_xor(bx0, cx),0,(__m128i *)&l0[idx0 & 0x1FFFF0]);
+    cryptonight_monero_tweak((uint64_t*)&l0[idx0 & 0x1FFFF0], vec_xor(bx0, cx));    
     idx0 = ((uint64_t*)&cx)[0];
     bx0 = cx;
 
-
     cx = vec_vsx_ld(0,(__m128i *)&l1[idx1 & 0x1FFFF0]);
-
     cx = _mm_aesenc_si128(cx, (__m128ll){axl1, axh1});
-
-    vec_vsx_st(vec_xor(bx1, cx),0,(__m128i *)&l1[idx1 & 0x1FFFF0]);
+    cryptonight_monero_tweak((uint64_t*)&l1[idx1 & 0x1FFFF0], vec_xor(bx1, cx));
     idx1 = ((uint64_t*)&cx)[0];
     bx1 = cx;
 
@@ -533,7 +536,7 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
     axl0 += hi;
     axh0 += lo;
     ((uint64_t*)&l0[idx0 & 0x1FFFF0])[0] = axl0;
-    ((uint64_t*)&l0[idx0 & 0x1FFFF0])[1] = axh0;
+    ((uint64_t*)&l0[idx0 & 0x1FFFF0])[1] = axh0 ^ monero_const_0;
     axh0 ^= ch;
     axl0 ^= cl;
     idx0 = axl0;
@@ -547,7 +550,7 @@ void cryptonight_double_hash(const void* input, size_t len, void* output, crypto
     axl1 += hi;
     axh1 += lo;
     ((uint64_t*)&l1[idx1 & 0x1FFFF0])[0] = axl1;
-    ((uint64_t*)&l1[idx1 & 0x1FFFF0])[1] = axh1;
+    ((uint64_t*)&l1[idx1 & 0x1FFFF0])[1] = axh1 ^ monero_const_1;
     axh1 ^= ch;
     axl1 ^= cl;
     idx1 = axl1;
