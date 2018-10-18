@@ -1,4 +1,4 @@
-# Deprecated code, new version at https://github.com/nioroso-x3/xmr-stak
+# Deprecated code, new version for CNv2 for cryptonight-v8 at https://github.com/nioroso-x3/xmr-stak
 
 # XMR-Stak-POWER - Monero mining software for POWER8 and later
 
